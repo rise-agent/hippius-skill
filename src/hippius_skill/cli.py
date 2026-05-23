@@ -143,6 +143,7 @@ def config_add_bucket(click_ctx: click.Context, name: str, algorithm: str) -> No
             algorithm,
             access_key=sub.get("accessKeyId", ""),
             secret_key=sub.get("secret", ""),
+            token_id=sub.get("id", ""),
         )
         click.echo(f"Bucket '{name}' created with algorithm {bucket_cfg.algorithm}.")
     except Exception as exc:
@@ -161,12 +162,81 @@ def config_list_buckets(click_ctx: click.Context) -> None:
         click.echo(name)
 
 
+@config_cmd.command("completion")
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish"], case_sensitive=False))
+def config_completion(shell: str) -> None:
+    """Print a shell completion script for the given shell.
+
+    Examples::
+
+        hippius-skill config completion bash | source
+        hippius-skill config completion bash > /etc/bash_completion.d/hippius-skill
+        hippius-skill config completion zsh > ~/.zshrc.d/hippius-skill
+        hippius-skill config completion fish > ~/.config/fish/completions/hippius-skill.fish
+    """
+    from click.shell_completion import get_completion_class
+
+    shell_class = get_completion_class(shell)
+    instance = shell_class(cli, {}, "hippius-skill", "HIPPIUS_SKILL_COMPLETE")
+    click.echo(instance.source())
+
+
 @config_cmd.command("remove-bucket")
 @click.argument("name")
 @click.pass_context
 def config_remove_bucket(click_ctx: click.Context, name: str) -> None:
-    """Remove a bucket from local configuration."""
+    """Remove a bucket from Hippius and local configuration."""
     cfg = _get_config(click_ctx)
+    try:
+        bucket_cfg = cfg.get_bucket(name)
+    except BucketNotFoundError:
+        click.secho(f"Bucket '{name}' not found in configuration.", fg="red", err=True)
+        sys.exit(_EXIT_CONFIG)
+
+    # Delete all files from S3 first
+    storage = _get_storage(bucket_cfg)
+    try:
+        keys = storage.list_files(name)
+    except Exception as exc:
+        click.secho(f"Failed to list files in bucket '{name}': {exc}", fg="red", err=True)
+        sys.exit(_EXIT_GENERAL)
+
+    for key in keys:
+        try:
+            storage.delete(name, key)
+        except Exception as exc:
+            click.secho(
+                f"Failed to delete '{key}' from bucket '{name}': {exc}", fg="red", err=True
+            )
+            sys.exit(_EXIT_GENERAL)
+
+    # Delete the bucket via Hippius REST API
+    client = _get_hippius_client(cfg)
+    try:
+        client.delete_bucket(name)
+    except HippiusClientError as exc:
+        if exc.status_code == 404:
+            click.secho(
+                f"Warning: Bucket '{name}' not found on Hippius server.", fg="yellow", err=True
+            )
+        else:
+            raise
+
+    # Revoke the sub-token if we have its id
+    if bucket_cfg.token_id:
+        try:
+            client.revoke_sub_token(bucket_cfg.token_id)
+        except HippiusClientError as exc:
+            if exc.status_code == 404:
+                click.secho(
+                    f"Warning: Sub-token for bucket '{name}' not found on Hippius server.",
+                    fg="yellow",
+                    err=True,
+                )
+            else:
+                raise
+
+    # Remove from local configuration
     cfg.remove_bucket(name)
     click.echo(f"Bucket '{name}' removed from configuration.")
 

@@ -48,6 +48,12 @@ def test_add_bucket_generates_passphrase(config: Config) -> None:
     assert len(bc.passphrase) >= 32
     assert bc.access_key == ""
     assert bc.secret_key == ""
+    assert bc.token_id == ""
+
+
+def test_add_bucket_with_token_id(config: Config) -> None:
+    bc = config.add_bucket("videos", token_id="tok_abc")
+    assert bc.token_id == "tok_abc"
 
 
 def test_add_bucket_duplicate(config: Config) -> None:
@@ -57,11 +63,12 @@ def test_add_bucket_duplicate(config: Config) -> None:
 
 
 def test_get_bucket(config: Config) -> None:
-    config.add_bucket("photos", access_key="ak", secret_key="sk")
+    config.add_bucket("photos", access_key="ak", secret_key="sk", token_id="tok123")
     bc = config.get_bucket("photos")
     assert bc.name == "photos"
     assert bc.access_key == "ak"
     assert bc.secret_key == "sk"
+    assert bc.token_id == "tok123"
 
 
 def test_get_bucket_not_found(config: Config) -> None:

@@ -61,6 +61,7 @@ def test_config_init(runner: CliRunner, mock_config: MagicMock) -> None:
 
 def test_config_add_bucket(runner: CliRunner, mock_config: MagicMock, mock_hippius_client: MagicMock) -> None:
     mock_hippius_client.create_sub_token.return_value = {
+        "id": "stok_789",
         "accessKeyId": "ak123",
         "secret": "sk456",
     }
@@ -70,7 +71,9 @@ def test_config_add_bucket(runner: CliRunner, mock_config: MagicMock, mock_hippi
     mock_hippius_client.create_sub_token.assert_called_once_with(
         "photos", scope_type="single_bucket", bucket_names=["photos"], actions=["read", "write"]
     )
-    mock_config.add_bucket.assert_called_once_with("photos", "AES256", access_key="ak123", secret_key="sk456")
+    mock_config.add_bucket.assert_called_once_with(
+        "photos", "AES256", access_key="ak123", secret_key="sk456", token_id="stok_789"
+    )
 
 
 def test_config_list_buckets(runner: CliRunner, mock_config: MagicMock) -> None:
@@ -80,10 +83,106 @@ def test_config_list_buckets(runner: CliRunner, mock_config: MagicMock) -> None:
     assert "alpha\nbeta\n" in result.output
 
 
-def test_config_remove_bucket(runner: CliRunner, mock_config: MagicMock) -> None:
+def test_config_completion_bash(runner: CliRunner) -> None:
+    result = runner.invoke(cli, ["config", "completion", "bash"])
+    assert result.exit_code == 0
+    assert "_hippius_skill_completion" in result.output
+
+
+def test_config_completion_fish(runner: CliRunner) -> None:
+    result = runner.invoke(cli, ["config", "completion", "fish"])
+    assert result.exit_code == 0
+    assert "_hippius_skill_completion" in result.output
+
+
+def test_config_completion_zsh(runner: CliRunner) -> None:
+    result = runner.invoke(cli, ["config", "completion", "zsh"])
+    assert result.exit_code == 0
+    assert "_hippius_skill_completion" in result.output
+
+
+def test_config_completion_invalid_shell(runner: CliRunner) -> None:
+    result = runner.invoke(cli, ["config", "completion", "invalid"])
+    assert result.exit_code != 0
+    assert "Invalid value" in result.output
+
+
+def test_config_remove_bucket(
+    runner: CliRunner,
+    mock_config: MagicMock,
+    mock_hippius_client: MagicMock,
+    mock_storage: MagicMock,
+) -> None:
+    bucket_cfg = MagicMock()
+    bucket_cfg.access_key = "ak"
+    bucket_cfg.secret_key = "sk"
+    bucket_cfg.token_id = "stok_123"
+    mock_config.get_bucket.return_value = bucket_cfg
+    mock_storage.list_files.return_value = ["a.txt", "b/c.txt"]
+
     result = runner.invoke(cli, ["config", "remove-bucket", "old"])
     assert result.exit_code == 0
+    mock_storage.list_files.assert_called_once_with("old")
+    assert mock_storage.delete.call_count == 2
+    mock_hippius_client.delete_bucket.assert_called_once_with("old")
+    mock_hippius_client.revoke_sub_token.assert_called_once_with("stok_123")
     mock_config.remove_bucket.assert_called_once_with("old")
+
+
+def test_config_remove_bucket_not_found_in_config(
+    runner: CliRunner, mock_config: MagicMock
+) -> None:
+    mock_config.get_bucket.side_effect = BucketNotFoundError("nope")
+    result = runner.invoke(cli, ["config", "remove-bucket", "missing"])
+    assert result.exit_code == 2
+    assert "not found" in result.output.lower()
+
+
+def test_config_remove_bucket_api_404(
+    runner: CliRunner,
+    mock_config: MagicMock,
+    mock_hippius_client: MagicMock,
+    mock_storage: MagicMock,
+) -> None:
+    bucket_cfg = MagicMock()
+    bucket_cfg.access_key = "ak"
+    bucket_cfg.secret_key = "sk"
+    bucket_cfg.token_id = "stok_123"
+    mock_config.get_bucket.return_value = bucket_cfg
+    mock_storage.list_files.return_value = []
+    from hippius_skill.hippius_client import HippiusClientError
+
+    mock_hippius_client.delete_bucket.side_effect = HippiusClientError("not found", status_code=404)
+    mock_hippius_client.revoke_sub_token.side_effect = HippiusClientError(
+        "not found", status_code=404
+    )
+
+    result = runner.invoke(cli, ["config", "remove-bucket", "old"])
+    assert result.exit_code == 0
+    assert "Warning" in result.output
+    mock_config.remove_bucket.assert_called_once_with("old")
+
+
+def test_config_remove_bucket_file_delete_fails(
+    runner: CliRunner,
+    mock_config: MagicMock,
+    mock_hippius_client: MagicMock,
+    mock_storage: MagicMock,
+) -> None:
+    bucket_cfg = MagicMock()
+    bucket_cfg.access_key = "ak"
+    bucket_cfg.secret_key = "sk"
+    bucket_cfg.token_id = "stok_123"
+    mock_config.get_bucket.return_value = bucket_cfg
+    mock_storage.list_files.return_value = ["a.txt"]
+    from hippius_skill.storage import StorageError
+
+    mock_storage.delete.side_effect = StorageError("network down")
+
+    result = runner.invoke(cli, ["config", "remove-bucket", "old"])
+    assert result.exit_code == 1
+    assert "Failed to delete" in result.output
+    mock_config.remove_bucket.assert_not_called()
 
 
 # --------------------------------------------------------------------------- #

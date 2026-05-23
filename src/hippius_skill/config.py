@@ -72,6 +72,7 @@ class BucketConfig:
     passphrase: str
     access_key: str
     secret_key: str
+    token_id: str
 
 
 class Config:
@@ -148,6 +149,7 @@ class Config:
             passphrase=self._parser.get(section, "passphrase"),
             access_key=self._parser.get(section, "access_key"),
             secret_key=self._parser.get(section, "secret_key"),
+            token_id=self._parser.get(section, "token_id", fallback=""),
         )
 
     def add_bucket(
@@ -157,6 +159,7 @@ class Config:
         /,
         access_key: str = "",
         secret_key: str = "",
+        token_id: str = "",
     ) -> BucketConfig:
         section = self._bucket_section(name)
         if self._parser.has_section(section):
@@ -167,6 +170,7 @@ class Config:
         self._parser.set(section, "passphrase", passphrase)
         self._parser.set(section, "access_key", access_key)
         self._parser.set(section, "secret_key", secret_key)
+        self._parser.set(section, "token_id", token_id)
         self._save()
         return BucketConfig(
             name=name,
@@ -174,6 +178,7 @@ class Config:
             passphrase=passphrase,
             access_key=access_key,
             secret_key=secret_key,
+            token_id=token_id,
         )
 
     def update_bucket_credentials(self, name: str, access_key: str, secret_key: str) -> None:

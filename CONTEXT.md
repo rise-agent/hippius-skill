@@ -33,7 +33,7 @@ _Avoid_: S3 key, child token.
 > **Dev**: So I upload `/data dump.sql` as `backups/dump.sql`?
 > **User**: Exactly. The CLI encrypts it with that passphrase, streams the ciphertext through GPG, and boto3 uploads it with an S3 SHA-256 checksum. The Hippius server verifies the checksum.
 > **Dev**: What if I need to revoke access later?
-> **User**: Revoke the Sub Token on Hippius, or remove the Bucket from local config. The Master Token stays untouched.
+> **User**: Run `config remove-bucket`. It deletes every File in the Bucket, deletes the Bucket itself via the Hippius REST API, revokes its Sub Token, and then drops the local config entry. The Master Token stays untouched.
 
 ## Flagged Ambiguities
 

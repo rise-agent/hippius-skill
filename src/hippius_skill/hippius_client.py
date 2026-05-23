@@ -11,7 +11,9 @@ import httpx
 class HippiusClientError(Exception):
     """Base exception for Hippius REST API errors."""
 
-    pass
+    def __init__(self, message: str, status_code: int = 0):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class HippiusClient:
@@ -30,7 +32,8 @@ class HippiusClient:
         response = httpx.request(method, url, headers=self._headers, timeout=30.0, **kwargs)
         if response.status_code >= 400:
             raise HippiusClientError(
-                f"Hippius API error {response.status_code}: {response.text}"
+                f"Hippius API error {response.status_code}: {response.text}",
+                status_code=response.status_code,
             )
         return response
 

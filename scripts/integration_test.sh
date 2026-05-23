@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Integration test for hippius-skill CLI.
-# Creates a bucket, uploads a file, downloads it, verifies content, and cleans up.
+# Creates a bucket, uploads a file, downloads it, verifies content,
+# deletes the file, confirms deletion, and cleans up.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,12 +17,9 @@ cleanup() {
     local exit_code=$?
     echo "--- Cleaning up ---"
 
-    # Delete remote file if bucket exists locally
+    # Remove bucket (and its files) from Hippius if it exists locally
     if hippius-skill config list-buckets 2>/dev/null | grep -qx "${BUCKET_NAME}"; then
-        echo "Deleting remote file ${REMOTE_PATH}..."
-        hippius-skill delete "${BUCKET_NAME}" "${REMOTE_PATH}" || true
-
-        echo "Removing bucket '${BUCKET_NAME}' from local config..."
+        echo "Removing bucket '${BUCKET_NAME}' from Hippius and local config..."
         hippius-skill config remove-bucket "${BUCKET_NAME}" || true
     fi
 
@@ -77,6 +75,22 @@ if [[ "${ORIGINAL_SHA}" != "${DOWNLOAD_SHA}" ]]; then
     exit 1
 fi
 echo "SHA-256 match: ${ORIGINAL_SHA}"
+echo ""
+
+# Step 6: Delete the file
+echo "--- Step 6: Delete file ---"
+hippius-skill delete "${BUCKET_NAME}" "${REMOTE_PATH}"
+echo ""
+
+# Step 7: List files to confirm deletion
+echo "--- Step 7: Confirm file deletion ---"
+DELETED_LIST=$(hippius-skill list "${BUCKET_NAME}" --prefix "test/" 2>/dev/null || true)
+if [[ -n "${DELETED_LIST}" && "${DELETED_LIST}" != "No files found." ]]; then
+    echo "ERROR: File still exists after deletion:"
+    echo "${DELETED_LIST}"
+    exit 1
+fi
+echo "File confirmed deleted."
 echo ""
 
 echo "All steps completed successfully."

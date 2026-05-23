@@ -37,8 +37,9 @@ Always adhere to the following terms from the project's CONTEXT.md:
 **List locally configured Buckets:**
 `hippius-skill config list-buckets`
 
-**Remove a Bucket from local config:**
+**Remove a Bucket from Hippius and local config:**
 `hippius-skill config remove-bucket <bucket-name>`
+Deletes all Files in the Bucket, deletes the Bucket via the Hippius API, revokes the Sub Token, and removes the local configuration. If any File deletion fails, the command aborts and the local config is preserved.
 
 ### File Operations
 **Encrypt and upload a local file:**
