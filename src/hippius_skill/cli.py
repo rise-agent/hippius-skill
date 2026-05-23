@@ -135,12 +135,14 @@ def config_add_bucket(click_ctx: click.Context, name: str, algorithm: str) -> No
     try:
         client = _get_hippius_client(cfg)
         client.create_bucket(name)
-        sub = client.create_sub_token(name, scope_type="single_bucket", bucket_names=[name])
+        sub = client.create_sub_token(
+            name, scope_type="single_bucket", bucket_names=[name], actions=["read", "write"]
+        )
         bucket_cfg = cfg.add_bucket(
             name,
             algorithm,
-            access_key=sub.get("access_key", ""),
-            secret_key=sub.get("secret_key", ""),
+            access_key=sub.get("accessKeyId", ""),
+            secret_key=sub.get("secret", ""),
         )
         click.echo(f"Bucket '{name}' created with algorithm {bucket_cfg.algorithm}.")
     except Exception as exc:

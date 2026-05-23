@@ -18,7 +18,7 @@ class HippiusClient:
     def __init__(self, api_token: str, base_url: str | None = None):
         self.api_token = api_token
         self.base_url = (base_url or "https://api.hippius.com").rstrip("/")
-        self._headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        self._headers = {"Authorization": f"Token {api_token}", "Content-Type": "application/json"}
 
     def _request(
         self,
@@ -39,20 +39,23 @@ class HippiusClient:
     # ------------------------------------------------------------------ #
 
     def create_bucket(self, name: str) -> None:
-        self._request("POST", "/api/v1/buckets", json={"name": name})
+        self._request("POST", "/api/objectstore/buckets/", json={"name": name})
 
     def delete_bucket(self, name: str) -> None:
-        self._request("DELETE", f"/api/v1/buckets/{name}")
+        self._request("DELETE", f"/api/objectstore/buckets/{name}/")
 
     def list_buckets(self) -> list[str]:
-        resp = self._request("GET", "/api/v1/buckets")
+        resp = self._request("GET", "/api/objectstore/buckets/")
         data = resp.json()
-        # Expected: {"buckets": [{"name": "..."}, ...]} or a plain list
-        if isinstance(data, list):
-            buckets = data
-        else:
-            buckets = data.get("buckets", [])
-        return [b["name"] if isinstance(b, dict) else str(b) for b in buckets]
+        # Hippius API returns {"buckets": [...], "count": ...}
+        buckets = data.get("buckets", []) if isinstance(data, dict) else data
+        names = []
+        for b in buckets:
+            if isinstance(b, dict):
+                names.append(b.get("bucket_name") or b.get("name", ""))
+            else:
+                names.append(str(b))
+        return names
 
     # ------------------------------------------------------------------ #
     # Sub-tokens
@@ -63,6 +66,7 @@ class HippiusClient:
         name: str,
         scope_type: str = "single_bucket",
         bucket_names: list[str] | None = None,
+        actions: list[str] | None = None,
     ) -> dict:
         payload: dict = {
             "name": name,
@@ -70,8 +74,10 @@ class HippiusClient:
         }
         if bucket_names is not None:
             payload["bucket_names"] = bucket_names
-        resp = self._request("POST", "/api/v1/tokens", json=payload)
+        if actions is not None:
+            payload["actions"] = actions
+        resp = self._request("POST", "/api/objectstore/sub-tokens/", json=payload)
         return resp.json()
 
     def revoke_sub_token(self, token_id: str) -> None:
-        self._request("DELETE", f"/api/v1/tokens/{token_id}")
+        self._request("POST", f"/api/objectstore/sub-tokens/{token_id}/revoke/")

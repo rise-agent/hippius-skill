@@ -189,7 +189,6 @@ def decrypt_stream(
     algorithm: str,
     ciphertext_stream: BinaryIO,
     destination_path: Path,
-    /,
 ) -> None:
     """Decrypt *ciphertext_stream* with GPG and write plaintext to *destination_path*."""
     proc = subprocess.Popen(

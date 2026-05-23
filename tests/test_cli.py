@@ -61,14 +61,14 @@ def test_config_init(runner: CliRunner, mock_config: MagicMock) -> None:
 
 def test_config_add_bucket(runner: CliRunner, mock_config: MagicMock, mock_hippius_client: MagicMock) -> None:
     mock_hippius_client.create_sub_token.return_value = {
-        "access_key": "ak123",
-        "secret_key": "sk456",
+        "accessKeyId": "ak123",
+        "secret": "sk456",
     }
     result = runner.invoke(cli, ["config", "add-bucket", "photos"])
     assert result.exit_code == 0
     mock_hippius_client.create_bucket.assert_called_once_with("photos")
     mock_hippius_client.create_sub_token.assert_called_once_with(
-        "photos", scope_type="single_bucket", bucket_names=["photos"]
+        "photos", scope_type="single_bucket", bucket_names=["photos"], actions=["read", "write"]
     )
     mock_config.add_bucket.assert_called_once_with("photos", "AES256", access_key="ak123", secret_key="sk456")
 

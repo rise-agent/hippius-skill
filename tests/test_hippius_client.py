@@ -48,9 +48,9 @@ def test_create_bucket(monkeypatch: MonkeyPatch) -> None:
 
     assert len(calls) == 1
     assert calls[0][0] == "POST"
-    assert calls[0][1] == "https://api.hippius.com/api/v1/buckets"
+    assert calls[0][1] == "https://api.hippius.com/api/objectstore/buckets/"
     assert calls[0][2]["json"] == {"name": "my-bucket"}
-    assert calls[0][2]["headers"]["Authorization"] == "Bearer token123"
+    assert calls[0][2]["headers"]["Authorization"] == "Token token123"
 
 
 def test_delete_bucket(monkeypatch: MonkeyPatch) -> None:
@@ -65,14 +65,14 @@ def test_delete_bucket(monkeypatch: MonkeyPatch) -> None:
     client = HippiusClient("token123", base_url="https://api.example.com")
     client.delete_bucket("old-bucket")
 
-    assert calls == [("DELETE", "https://api.example.com/api/v1/buckets/old-bucket")]
+    assert calls == [("DELETE", "https://api.example.com/api/objectstore/buckets/old-bucket/")]
 
 
 def test_list_buckets(monkeypatch: MonkeyPatch) -> None:
     def fake_request(method, url, **kwargs):
         return _make_response(
             200,
-            json_data={"buckets": [{"name": "alpha"}, {"name": "beta"}]},
+            json_data=[{"name": "alpha"}, {"name": "beta"}],
         )
 
     monkeypatch.setattr(httpx, "request", fake_request)
@@ -107,8 +107,8 @@ def test_create_sub_token(monkeypatch: MonkeyPatch) -> None:
             201,
             json_data={
                 "id": "stok_123",
-                "access_key": "ACCESS123",
-                "secret_key": "SECRET456",
+                "accessKeyId": "ACCESS123",
+                "secret": "SECRET456",
             },
         )
 
@@ -117,8 +117,8 @@ def test_create_sub_token(monkeypatch: MonkeyPatch) -> None:
     client = HippiusClient("token123")
     result = client.create_sub_token("my-token", scope_type="single_bucket", bucket_names=["b1"])
 
-    assert result["access_key"] == "ACCESS123"
-    assert result["secret_key"] == "SECRET456"
+    assert result["accessKeyId"] == "ACCESS123"
+    assert result["secret"] == "SECRET456"
 
 
 def test_revoke_sub_token(monkeypatch: MonkeyPatch) -> None:
@@ -133,7 +133,7 @@ def test_revoke_sub_token(monkeypatch: MonkeyPatch) -> None:
     client = HippiusClient("token123")
     client.revoke_sub_token("stok_123")
 
-    assert calls == [("DELETE", "https://api.hippius.com/api/v1/tokens/stok_123")]
+    assert calls == [("POST", "https://api.hippius.com/api/objectstore/sub-tokens/stok_123/revoke/")]
 
 
 # --------------------------------------------------------------------------- #
