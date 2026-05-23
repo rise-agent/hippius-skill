@@ -1,3 +1,3 @@
-# Streaming Uploads with On-the-fly Hashing
+# Streaming Uploads with S3 Native Checksums
 
-Files will be encrypted and uploaded as a stream rather than using temporary local files. To ensure data integrity without persisting the ciphertext to disk, the CLI will calculate the hash of the encrypted stream during upload and verify it against the hash returned by the Hippius server.
+Files will be encrypted and uploaded as a stream rather than using temporary local files. Data integrity is ensured via `boto3`'s native `ChecksumAlgorithm='SHA256'` on `put_object`, which computes the ciphertext hash client-side and verifies it server-side. The resulting SHA-256 checksum is returned in the response metadata and compared on download. For the MVP, only single-part streaming uploads are supported (5GB limit).

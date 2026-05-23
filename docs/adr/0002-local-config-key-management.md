@@ -1,3 +1,3 @@
 # Local Configuration and Key Management
 
-Encryption keys (passphrases) and the chosen encryption algorithm will be stored in a local `.hippius-skill/config.ini` file. This file is strictly local and will never be uploaded to the storage system, ensuring that the decryption keys remain separate from the encrypted data.
+Encryption keys (passphrases), S3 credentials, and the chosen encryption algorithm are stored in a local `~/.hippius-skill/config.ini` file. Global defaults (Hippius REST API and S3 endpoints) are stored in a separate `app.ini` shipped with the package — the app config is read-only, and the user config has no override mechanism for endpoints. All secrets in the user config are plain text, with `chmod 600` enforced on every write. This file is strictly local and will never be uploaded to the storage system, ensuring that the decryption keys remain separate from the encrypted data.
