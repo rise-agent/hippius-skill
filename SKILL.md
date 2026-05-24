@@ -1,6 +1,17 @@
 ---
 name: hippius-backup
 description: Back up and retrieve encrypted files using the hippius-skill CLI. Use when the user asks to store files in Hippius, download from Hippius, or manage Hippius Buckets.
+version: "0.1.0"
+author: anlach
+license: MIT
+required_environment_variables:
+  - name: HIPPIUS_MASTER_TOKEN
+    prompt: "Enter your Hippius Master Token"
+    help: "Get it from https://hippius.com/account/tokens — used to authenticate with the Hippius API."
+metadata:
+  hermes:
+    tags: [hippius, s3, encryption, backup, storage, cli]
+    related_skills: []
 ---
 
 <what-to-do>

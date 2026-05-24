@@ -1,6 +1,6 @@
 # Hippius Storage Assistant
 
-A CLI tool for securely storing and retrieving encrypted files from the Hippius storage system.
+A CLI tool and Hermes Agent skill for securely storing and retrieving encrypted files from the Hippius storage system.
 
 ## Features
 
@@ -10,7 +10,35 @@ A CLI tool for securely storing and retrieving encrypted files from the Hippius 
 - **Data Integrity**: Streaming uploads with on-the-fly hashing to verify ciphertext integrity.
 - **Flat Namespace**: Supports "folders" via path delimiters in a flat storage model.
 
-## Configuration
+## Installation
+
+### Python CLI
+
+```bash
+pip install hippius-skill
+```
+
+Verify:
+```bash
+hippius-skill --help
+```
+
+### Hermes Agent Skill (optional)
+
+To get Hermes Agent to know how to operate this CLI:
+
+```bash
+hermes skills install anlach/hippius-skill
+```
+
+Or add this repository as a skill source:
+
+```bash
+hermes skills tap add anlach/hippius-skill
+hermes skills search hippius-backup
+```
+
+## Quick Start
 
 Before using file commands, store your Hippius Master Token and create a Bucket:
 
